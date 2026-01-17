@@ -7,10 +7,15 @@ export default withAuth(
     const isAdmin = token?.role === "admin";
     const isCustomer = token?.role === "customer";
 
-    // Admin routes
+    // Allow admin login page without authentication
+    if (req.nextUrl.pathname === "/admin/login") {
+      return NextResponse.next();
+    }
+
+    // Admin routes (except login)
     if (req.nextUrl.pathname.startsWith("/admin")) {
       if (!isAdmin) {
-        return NextResponse.redirect(new URL("/", req.url));
+        return NextResponse.redirect(new URL("/admin/login", req.url));
       }
     }
 
@@ -33,6 +38,11 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token, req }) => {
+        // Allow admin login page
+        if (req.nextUrl.pathname === "/admin/login") {
+          return true;
+        }
+
         // Allow public routes
         if (
           req.nextUrl.pathname === "/" ||

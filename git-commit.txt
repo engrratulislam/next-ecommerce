@@ -1,1 +1,461 @@
-Backend working....
+Fix Admin Login 401 Unauthorized Error - Password Double-Hashing Issue
+
+## Root Cause
+Admin login was failing with "Invalid admin credentials" due to password double-hashing in the seed script.
+
+The seed-admin.ts script was:
+1. Manually hashing the password with bcrypt (line 35)
+2. Saving with validateBeforeSave: true, which triggered the Admin model's pre-save hook
+3. The pre-save hook hashed the already-hashed password again (double-hashing)
+4. Result: Password comparison always failed because bcrypt.compare('admin123', doubleHashedPassword) !== true
+
+## Solution Implemented
+Fixed seed-admin.ts to pass plain-text password and let the model's pre-save hook handle hashing:
+- Removed manual bcrypt.hash() call
+- Pass plain password 'admin123' to Admin constructor
+- Changed save() call from save({ validateBeforeSave: true }) to save()
+- Pre-save hook now properly hashes password once
+
+## Changes Made
+1. Updated scripts/seed-admin.ts:
+   - Removed manual password hashing
+   - Let Admin model pre-save hook handle hashing automatically
+   - Added clarifying comments
+
+2. Reset existing admin account:
+   - Deleted double-hashed admin from database
+   - Recreated with correct single-hash password
+   - Verified password comparison works
+
+## Verification
+- Password verification test: PASSED
+- Admin can now login with email: admin@example.com, password: admin123
+- bcrypt.compare() works correctly with stored hash
+
+## Technical Details
+- Admin model pre-save hook uses bcrypt.genSalt(10) and bcrypt.hash()
+- Password field has select: false for security
+- comparePassword method uses bcrypt.compare() for validation
+
+Frontend Implementation - Phase 3: Customer Features Complete
+
+## Summary
+Implemented order details with tracking, addresses management, wishlist functionality, and Stripe payment processing following the Feature Implementation Protocol.
+
+## Key Implementation Decisions
+
+### 1. Product Listing Architecture
+- Client-side rendering with URL-based state management for filters
+- Real-time filter updates without page reload
+- Responsive filter sidebar (desktop) and drawer (mobile)
+- Pagination with server-side data fetching
+
+### 2. Product Detail Page Structure
+- Server-side rendering for SEO optimization
+- Dynamic metadata generation for each product
+- Comprehensive product information display
+- Image gallery with lightbox and zoom functionality
+- Variant selection with stock validation
+- Related products recommendation
+
+### 3. Component Organization
+- Modular component structure for reusability
+- Separation of concerns (presentation vs logic)
+- Client/Server component optimization
+- Zustand for cart state management
+
+## Integration Points
+
+### Backend APIs Integrated:
+- GET /api/products - Product listing with filters, pagination, sorting
+- GET /api/products/[id] - Single product details
+- GET /api/products/search - Product search with autocomplete
+- GET /api/categories - Category listing for filters
+- GET /api/reviews/product/[id] - Product reviews
+
+### State Management:
+- Cart Store: Add to cart, quantity management
+- UI Store: Mobile menu, cart drawer toggles
+- Local storage persistence for cart items
+
+### Components Created:
+1. **Product Listing Page** (`src/app/(shop)/products/page.tsx`)
+   - Advanced filtering (category, price, rating, availability)
+   - Sorting options (price, rating, popularity, name)
+   - Pagination with page navigation
+   - Responsive grid layout
+   - Loading states with skeletons
+
+2. **Product Filter Component** (`src/components/products/ProductFilter.tsx`)
+   - Category multi-select with checkboxes
+   - Price range slider with apply button
+   - Rating filter (5★ to 1★)
+   - Stock availability toggle
+   - Active filters display with remove option
+   - Clear all filters functionality
+
+3. **Product Detail Page** (`src/app/(shop)/products/[slug]/page.tsx`)
+   - SEO-optimized with dynamic metadata
+   - Breadcrumb navigation
+   - Product gallery, details, tabs, and related products
+   - Server-side rendering for performance
+
+4. **Product Gallery Component** (`src/components/products/ProductGallery.tsx`)
+   - Main image display with navigation
+   - Thumbnail grid navigation
+   - Lightbox modal for zoomed view
+   - Keyboard and mouse navigation
+   - Image counter display
+
+5. **Product Details Component** (`src/components/products/ProductDetails.tsx`)
+   - Product name, category, and SKU
+   - Rating display with review count
+   - Price with discount calculation
+   - Stock status indicator
+   - Variant selection (size, color, etc.)
+   - Quantity selector with stock validation
+   - Add to cart with loading state
+   - Wishlist and share functionality
+   - Product tags display
+
+6. **Product Tabs Component** (`src/components/products/ProductTabs.tsx`)
+   - Description tab with HTML content
+   - Specifications table
+   - Reviews with rating distribution
+   - Shipping & returns information
+   - Responsive tab navigation
+
+7. **Related Products Component** (`src/components/products/RelatedProducts.tsx`)
+   - Display up to 4 related products
+   - Reuses ProductCard component
+   - Responsive grid layout
+
+## Technical Highlights
+
+### Performance Optimizations:
+- Server-side rendering for product pages (SEO)
+- Client-side filtering for instant updates
+- Image lazy loading
+- Loading skeletons for better UX
+- Debounced search input
+
+### User Experience:
+- Responsive design (mobile-first)
+- Smooth transitions and animations
+- Toast notifications for user actions
+- Loading states for async operations
+- Error handling with user-friendly messages
+
+### Accessibility:
+- Semantic HTML structure
+- Keyboard navigation support
+- ARIA labels for screen readers
+- Focus management in modals
+- Color contrast compliance
+
+### Code Quality:
+- TypeScript for type safety
+- Reusable component architecture
+- Consistent naming conventions
+- Clean code with comments
+- Error boundary handling
+
+## Testing Performed
+- Product listing loads with filters
+- Filter updates work correctly
+- Pagination navigates properly
+- Product detail page displays all information
+- Image gallery navigation works
+- Add to cart functionality tested
+- Variant selection validated
+- Mobile responsive design verified
+- Search autocomplete tested
+
+## Phase 2 Implementation Complete
+
+### 1. Shopping Cart Page (`/cart`)
+- ✅ Cart items display with images and details
+- ✅ Quantity controls (increase/decrease)
+- ✅ Remove items functionality
+- ✅ Clear cart option
+- ✅ Coupon code application with validation
+- ✅ Real-time price calculations (subtotal, tax, shipping, total)
+- ✅ Free shipping threshold indicator
+- ✅ Empty cart state with CTA
+- ✅ Order summary sidebar
+- ✅ Trust badges display
+
+### 2. Checkout Flow (`/checkout`)
+- ✅ Multi-step process (Shipping → Payment → Review)
+- ✅ Progress indicator with step navigation
+- ✅ Shipping information form with validation
+- ✅ Shipping method selection (Standard/Express)
+- ✅ Payment method selection (Stripe/PayPal/COD)
+- ✅ Billing address (same as shipping option)
+- ✅ Order review with all details
+- ✅ Order summary sidebar with totals
+- ✅ Place order functionality
+- ✅ Integration with backend order API
+
+### 3. Authentication Pages
+**Login Page (`/login`)**
+- ✅ Email and password fields
+- ✅ Show/hide password toggle
+- ✅ Remember me checkbox
+- ✅ Forgot password link
+- ✅ NextAuth.js integration
+- ✅ Social login placeholders (Google, Facebook)
+- ✅ Sign up link
+
+**Register Page (`/register`)**
+- ✅ Full name, email, password fields
+- ✅ Password confirmation with validation
+- ✅ Show/hide password toggles
+- ✅ Terms and conditions checkbox
+- ✅ Backend API integration
+- ✅ Email verification notification
+- ✅ Social signup placeholders
+
+**Forgot Password Page (`/forgot-password`)**
+- ✅ Email input for reset link
+- ✅ Success state with confirmation
+- ✅ Backend API integration
+- ✅ Back to login navigation
+
+### 4. Customer Dashboard (`/account/*`)
+**Layout (`/account/layout.tsx`)**
+- ✅ Sidebar navigation menu
+- ✅ Profile, Orders, Addresses, Wishlist links
+- ✅ Sign out functionality
+- ✅ Authentication guard
+- ✅ Loading state
+- ✅ Breadcrumb navigation
+
+**Profile Page (`/account/profile`)**
+- ✅ View profile information
+- ✅ Edit profile functionality
+- ✅ Name, email, phone fields
+- ✅ Account statistics (orders, spent, points)
+- ✅ Change password section
+- ✅ Member since display
+
+**Orders Page (`/account/orders`)**
+- ✅ Order history list
+- ✅ Order status badges with colors
+- ✅ Order items preview
+- ✅ View details button
+- ✅ Download invoice button
+- ✅ Cancel order option (for pending)
+- ✅ Empty state with CTA
+- ✅ Loading state
+
+## Phase 3 Implementation Complete
+
+### 1. Order Details Page (`/account/orders/[id]`)
+- ✅ Complete order information display
+- ✅ Order status timeline with progress indicator
+- ✅ Tracking information (courier, tracking number, estimated delivery)
+- ✅ Order items with images and details
+- ✅ Shipping and billing addresses
+- ✅ Payment information and status
+- ✅ Order summary with price breakdown
+- ✅ Cancel order functionality (for pending orders)
+- ✅ Download invoice button
+- ✅ Responsive design with sticky sidebar
+
+### 2. Addresses Management (`/account/addresses`)
+- ✅ List all saved addresses
+- ✅ Add new address with full form
+- ✅ Edit existing addresses
+- ✅ Delete addresses with confirmation
+- ✅ Set default address
+- ✅ Address type selection (shipping/billing/both)
+- ✅ Default address indicator
+- ✅ Empty state with CTA
+- ✅ Modal dialog for add/edit
+- ✅ Form validation
+
+### 3. Wishlist Page (`/account/wishlist`)
+- ✅ Display wishlist products in grid
+- ✅ Product cards with images and details
+- ✅ Add to cart from wishlist
+- ✅ Remove from wishlist
+- ✅ Add all to cart functionality
+- ✅ Share wishlist option
+- ✅ Stock status indicators
+- ✅ Price and discount display
+- ✅ Empty state with CTA
+- ✅ Responsive grid layout
+
+### 4. Payment Processing
+**Stripe Payment Page (`/checkout/payment`)**
+- ✅ Stripe Elements integration
+- ✅ Secure payment form
+- ✅ Payment Element component
+- ✅ Order summary display
+- ✅ Error handling and validation
+- ✅ Loading states
+- ✅ Trust badges and security indicators
+- ✅ Back navigation
+- ✅ Terms acceptance
+
+**Success Page (`/checkout/success`)**
+- ✅ Order confirmation message
+- ✅ Order number display
+- ✅ Order details summary
+- ✅ Order items list
+- ✅ Shipping address display
+- ✅ Price breakdown
+- ✅ Action buttons (view order, download invoice, continue shopping)
+- ✅ What's next information
+- ✅ Cart clearing on success
+
+## Key Implementation Decisions
+
+### 1. Order Tracking Architecture
+- Timeline component with visual progress indicator
+- Status-based color coding for better UX
+- Conditional rendering based on order status
+- Real-time tracking information display
+- Integration with backend order API
+
+### 2. Address Management Design
+- Modal-based add/edit for better UX
+- Default address highlighting with ring border
+- Address type categorization
+- Inline actions (edit, delete, set default)
+- Form validation with required fields
+
+### 3. Wishlist Implementation
+- Grid layout matching product listing
+- Reusable ProductCard styling
+- Batch operations (add all to cart)
+- Social sharing capability
+- Stock validation before cart addition
+
+### 4. Payment Processing Flow
+- Stripe Elements for PCI compliance
+- Client-side payment confirmation
+- Redirect handling for 3D Secure
+- Error handling with user feedback
+- Order summary for transparency
+- Security indicators for trust
+
+## Integration Points
+
+### Backend APIs Integrated:
+- GET /api/orders/[id] - Order details
+- POST /api/orders/[id]/cancel - Cancel order
+- GET /api/addresses - List addresses
+- POST /api/addresses - Create address
+- PUT /api/addresses/[id] - Update address
+- DELETE /api/addresses/[id] - Delete address
+- PUT /api/addresses/[id]/set-default - Set default
+- GET /api/wishlist - Get wishlist
+- DELETE /api/wishlist/[id] - Remove from wishlist
+- POST /api/payment/stripe/create-intent - Create payment
+- Stripe confirmPayment - Process payment
+
+### State Management:
+- Cart Store: Clear cart on order success
+- Zustand persistence for cart items
+- Local state for forms and dialogs
+
+### External Services:
+- Stripe.js SDK for payment processing
+- Stripe Elements for secure card input
+- Web Share API for wishlist sharing
+
+## Technical Highlights
+
+### Security:
+- PCI-compliant payment handling
+- No card data stored locally
+- Secure payment confirmation
+- HTTPS-only payment pages
+- Client-side validation
+
+### Performance:
+- Lazy loading of Stripe SDK
+- Optimistic UI updates
+- Loading states for async operations
+- Image optimization
+- Efficient re-renders
+
+### User Experience:
+- Visual order tracking timeline
+- Inline address editing
+- Batch wishlist operations
+- Clear success confirmation
+- Error handling with toast notifications
+- Loading skeletons
+- Empty states with CTAs
+
+### Accessibility:
+- Keyboard navigation support
+- ARIA labels for screen readers
+- Focus management in modals
+- Color contrast compliance
+- Semantic HTML structure
+
+## Testing Performed
+- Order details page loads correctly
+- Order timeline displays proper status
+- Address CRUD operations work
+- Default address setting functional
+- Wishlist add/remove operations
+- Add to cart from wishlist
+- Stripe payment form renders
+- Payment processing flow tested
+- Success page displays order details
+- Cart clears on successful order
+- Mobile responsive design verified
+
+## Next Steps
+Phase 4 will implement:
+1. Admin dashboard layout and navigation
+2. Product management (CRUD operations)
+3. Order management (view, update status, refunds)
+4. Customer management (view, edit, statistics)
+5. Inventory management (stock tracking, alerts)
+6. Reports and analytics (sales, customers, products)
+7. Settings pages (general, payment, shipping, email)
+
+## Dependencies Added
+- @stripe/stripe-js - Stripe JavaScript SDK
+- @stripe/react-stripe-js - Stripe React components
+
+## Breaking Changes
+None - All changes are additive
+
+## Notes
+- All customer-facing features are now complete
+- Payment processing is production-ready with Stripe
+- Order tracking provides full transparency
+- Address management streamlines checkout
+- Wishlist enhances shopping experience
+- All components follow established patterns
+- Mobile-first responsive design throughout
+- Comprehensive error handling implemented
+- Loading states improve perceived performance
+
+## Dependencies
+- Next.js 16.1.1 (App Router)
+- React 19.2.3
+- TypeScript 5
+- Tailwind CSS 4
+- Zustand 5 (state management)
+- Radix UI components
+- Lucide React icons
+- Sonner (toast notifications)
+
+## Breaking Changes
+None - All changes are additive
+
+## Notes
+- All backend APIs are functional and tested
+- Product images use placeholder if not available
+- Cart state persists in localStorage
+- Mobile navigation drawer implemented
+- Search bar with autocomplete working
+- All components follow design system
