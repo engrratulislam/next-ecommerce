@@ -67,23 +67,29 @@ export default function AdminDashboard() {
     try {
       // Fetch stats
       const statsRes = await fetch('/api/admin/dashboard/stats');
-      const statsData = await statsRes.json();
-      if (statsData.success) {
-        setStats(statsData.stats);
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        if (statsData.success) {
+          setStats(statsData.stats);
+        }
       }
 
       // Fetch recent orders
       const ordersRes = await fetch('/api/orders?limit=5&sort=-createdAt');
-      const ordersData = await ordersRes.json();
-      if (ordersData.success) {
-        setRecentOrders(ordersData.orders || []);
+      if (ordersRes.ok) {
+        const ordersData = await ordersRes.json();
+        if (ordersData.success) {
+          setRecentOrders(ordersData.orders || []);
+        }
       }
 
       // Fetch low stock products
-      const lowStockRes = await fetch('/api/inventory/low-stock?limit=5');
-      const lowStockData = await lowStockRes.json();
-      if (lowStockData.success) {
-        setLowStockProducts(lowStockData.products || []);
+      const lowStockRes = await fetch('/api/inventory?lowStock=true');
+      if (lowStockRes.ok) {
+        const lowStockData = await lowStockRes.json();
+        if (lowStockData.success) {
+          setLowStockProducts(lowStockData.products || []);
+        }
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

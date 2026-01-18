@@ -1,3 +1,50 @@
+Fix JSON Parse Error on Admin Dashboard - Missing API Endpoint
+
+## Root Cause
+Admin dashboard was failing with "JSON.parse: unexpected character at line 1 column 1" because:
+1. Dashboard tried to fetch `/api/admin/dashboard/stats` - endpoint didn't exist (returned 404 HTML)
+2. Dashboard tried to fetch `/api/inventory/low-stock` - wrong endpoint path
+3. Code called `.json()` on failed responses without checking `response.ok` first
+4. When parsing HTML as JSON, JSON.parse() fails at the first HTML character
+
+## Solution Implemented
+1. Created missing `/api/admin/dashboard/stats` endpoint:
+   - Aggregates revenue statistics (total, monthly comparison)
+   - Counts orders (total, pending, monthly comparison)
+   - Counts customers (total, monthly comparison)
+   - Counts products (total, low stock)
+   - Calculates percentage changes for trend indicators
+   - Admin authentication required
+
+2. Fixed dashboard fetch logic:
+   - Changed `/api/inventory/low-stock` to `/api/inventory?lowStock=true` (correct endpoint)
+   - Added `response.ok` check before calling `.json()` to prevent parsing errors
+   - Only parse JSON from successful responses
+
+## Changes Made
+1. Created `src/app/api/admin/dashboard/stats/route.ts`:
+   - GET endpoint with admin authentication
+   - MongoDB aggregation for revenue calculations
+   - Month-over-month comparison logic
+   - Low stock product detection
+
+2. Updated `src/app/admin/(dashboard)/dashboard/page.tsx`:
+   - Fixed inventory API endpoint path
+   - Added response status validation before JSON parsing
+   - Prevents JSON parse errors on failed requests
+
+## Verification
+- Dashboard stats API returns valid JSON with statistics
+- All three API calls use correct endpoints
+- No JSON parse errors when responses fail
+- Dashboard displays properly with data
+
+## Technical Details
+- Stats API uses MongoDB aggregation pipeline for performance
+- Calculates percentage changes: ((current - last) / last) * 100
+- Revenue rounded to 2 decimal places
+- All endpoints require admin authentication
+
 Fix Admin Login 401 Unauthorized Error - Password Double-Hashing Issue
 
 ## Root Cause

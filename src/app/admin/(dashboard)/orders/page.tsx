@@ -134,12 +134,12 @@ export default function OrdersPage() {
           </div>
 
           {/* Order Status Filter */}
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter || "all"} onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)}>
             <SelectTrigger>
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="confirmed">Confirmed</SelectItem>
               <SelectItem value="processing">Processing</SelectItem>
@@ -151,12 +151,12 @@ export default function OrdersPage() {
           </Select>
 
           {/* Payment Status Filter */}
-          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+          <Select value={paymentFilter || "all"} onValueChange={(value) => setPaymentFilter(value === "all" ? "" : value)}>
             <SelectTrigger>
               <SelectValue placeholder="Payment Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Payments</SelectItem>
+              <SelectItem value="all">All Payments</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="paid">Paid</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>

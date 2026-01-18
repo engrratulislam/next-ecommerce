@@ -1,10 +1,10 @@
 # MongoDB Database Schema Documentation
 ## Next.js E-Commerce Platform
 
-**Document Version:** 1.0  
-**Last Updated:** January 17, 2026  
+**Document Version:** 1.1  
+**Last Updated:** January 18, 2026  
 **Database Type:** MongoDB (NoSQL)  
-**Total Collections:** 11
+**Total Collections:** 13
 
 ---
 
@@ -35,25 +35,65 @@ This e-commerce platform uses **MongoDB** as its primary database, leveraging Mo
 
 | # | Collection Name | Purpose | Primary Key | Record Count Estimate |
 |---|----------------|---------|-------------|---------------------|
-| 1 | **users** | Customer & admin accounts | `_id` (ObjectId) | Dynamic |
-| 2 | **products** | Product catalog | `_id` (ObjectId) | High Volume |
-| 3 | **categories** | Product categorization | `_id` (ObjectId) | Low-Medium |
-| 4 | **orders** | Order management | `_id` (ObjectId) | High Volume |
-| 5 | **carts** | Shopping carts (guest & user) | `_id` (ObjectId) | Dynamic |
-| 6 | **wishlists** | User wishlist items | `_id` (ObjectId) | Dynamic |
-| 7 | **reviews** | Product reviews & ratings | `_id` (ObjectId) | Medium-High |
-| 8 | **coupons** | Discount codes | `_id` (ObjectId) | Low |
-| 9 | **newsletters** | Email subscriptions | `_id` (ObjectId) | Medium |
-| 10 | **pagecontents** | CMS pages (About, Contact, etc.) | `_id` (ObjectId) | Low |
-| 11 | **settings** | System configuration | `_id` (ObjectId) | 1 Document |
+| 1 | **admins** | Administrator accounts | `_id` (ObjectId) | Low |
+| 2 | **users** | Customer accounts | `_id` (ObjectId) | Dynamic |
+| 3 | **products** | Product catalog | `_id` (ObjectId) | High Volume |
+| 4 | **categories** | Product categorization | `_id` (ObjectId) | Low-Medium |
+| 5 | **orders** | Order management | `_id` (ObjectId) | High Volume |
+| 6 | **carts** | Shopping carts (guest & user) | `_id` (ObjectId) | Dynamic |
+| 7 | **wishlists** | User wishlist items | `_id` (ObjectId) | Dynamic |
+| 8 | **reviews** | Product reviews & ratings | `_id` (ObjectId) | Medium-High |
+| 9 | **coupons** | Discount codes | `_id` (ObjectId) | Low |
+| 10 | **campaigns** | Email marketing campaigns | `_id` (ObjectId) | Medium |
+| 11 | **newsletters** | Email subscriptions | `_id` (ObjectId) | Medium |
+| 12 | **pagecontents** | CMS pages (About, Contact, etc.) | `_id` (ObjectId) | Low |
+| 13 | **settings** | System configuration | `_id` (ObjectId) | 1 Document |
 
 ---
 
 ## Detailed Schema Definitions
 
-### 1. Users Collection (`users`)
+### 1. Admins Collection (`admins`)
 
-**Purpose:** Stores customer and administrator account information with authentication details.
+**Purpose:** Stores administrator account information with separate authentication from customers.
+
+**Model Location:** `/src/models/Admin.ts`
+
+#### Schema Structure:
+
+```typescript
+{
+  _id: ObjectId,                    // Auto-generated primary key
+  name: String,                     // Required, trimmed
+  email: String,                    // Required, unique, indexed, lowercase
+  password: String,                 // Required, hashed (bcrypt), min 6 chars, select: false
+  role: String,                     // Enum: ['admin'], default: 'admin'
+  isActive: Boolean,                // Account status, default: true
+  lastLogin: Date,                  // Last login timestamp (optional)
+  createdAt: Date,                  // Auto-generated
+  updatedAt: Date                   // Auto-generated
+}
+```
+
+#### Indexes:
+- `email` (unique)
+
+#### Methods:
+- `comparePassword(candidatePassword: string): Promise<boolean>` - Password comparison
+
+#### Pre-save Hooks:
+- Password hashing with bcrypt (salt rounds: 10)
+
+#### Notes:
+- Separate from users collection for better security
+- Admin-only role enforcement
+- Used for admin dashboard authentication
+
+---
+
+### 2. Users Collection (`users`)
+
+**Purpose:** Stores customer account information with authentication details.
 
 **Model Location:** `/src/models/User.ts`
 
@@ -501,7 +541,56 @@ This e-commerce platform uses **MongoDB** as its primary database, leveraging Mo
 
 ---
 
-### 9. Newsletters Collection (`newsletters`)
+### 9. Campaigns Collection (`campaigns`)
+
+**Purpose:** Email marketing campaign management with recipient targeting and performance tracking.
+
+**Model Location:** `/src/models/Campaign.ts`
+
+#### Schema Structure:
+
+```typescript
+{
+  _id: ObjectId,                    // Auto-generated primary key
+  name: String,                     // Required, max 100 chars
+  subject: String,                  // Required, max 200 chars
+  content: String,                  // Required, HTML email content
+  status: String,                   // Enum: ['draft', 'scheduled', 'sent', 'cancelled'], indexed
+  recipientType: String,            // Required, Enum: ['all', 'subscribers', 'customers', 'custom']
+  recipientEmails: [String],        // Custom recipient list (optional)
+  scheduledAt: Date,                // Scheduled send time (optional)
+  sentAt: Date,                     // Actual send timestamp (optional)
+  totalRecipients: Number,          // Total recipients count, default: 0
+  successCount: Number,             // Successfully sent count, default: 0
+  failureCount: Number,             // Failed send count, default: 0
+  openCount: Number,                // Email opens count, default: 0
+  clickCount: Number,               // Link clicks count, default: 0
+  createdBy: ObjectId,              // Required, ref: 'Admin'
+  createdAt: Date,                  // Auto-generated
+  updatedAt: Date                   // Auto-generated
+}
+```
+
+#### Indexes:
+- Compound: `{ status: 1, createdAt: -1 }`
+- Single: `{ createdBy: 1 }`
+
+#### Features:
+- Multiple recipient targeting options (all users, subscribers only, customers only, custom list)
+- Campaign scheduling capability
+- Performance tracking (sends, opens, clicks)
+- Draft/scheduled/sent status management
+- Admin attribution for audit trail
+
+#### Notes:
+- Used by admin marketing dashboard
+- Integrates with Newsletter collection for subscriber targeting
+- Supports batch email sending
+- Performance metrics for campaign effectiveness
+
+---
+
+### 10. Newsletters Collection (`newsletters`)
 
 **Purpose:** Email newsletter subscription management.
 
@@ -528,7 +617,7 @@ This e-commerce platform uses **MongoDB** as its primary database, leveraging Mo
 
 ---
 
-### 10. PageContents Collection (`pagecontents`)
+### 11. PageContents Collection (`pagecontents`)
 
 **Purpose:** CMS for static pages (About, Terms, Privacy Policy, etc.).
 
@@ -559,7 +648,7 @@ This e-commerce platform uses **MongoDB** as its primary database, leveraging Mo
 
 ---
 
-### 11. Settings Collection (`settings`)
+### 12. Settings Collection (`settings`)
 
 **Purpose:** Single document for global system configuration.
 
@@ -665,6 +754,8 @@ This e-commerce platform uses **MongoDB** as its primary database, leveraging Mo
 ### Entity Relationship Diagram (Textual):
 
 ```
+admins (1) ←→ (N) campaigns
+
 users (1) ←→ (N) orders
 users (1) ←→ (1) wishlists
 users (1) ←→ (N) carts
@@ -687,16 +778,17 @@ orders (N) ←→ (1) coupons (via couponCode)
 
 ### Key Relationships:
 
-1. **User → Orders**: One-to-Many (A user can have multiple orders)
-2. **User → Wishlist**: One-to-One (Each user has one wishlist)
-3. **User → Carts**: One-to-Many (User + session-based carts)
-4. **User → Reviews**: One-to-Many (User can review multiple products)
-5. **Category → Products**: One-to-Many (Category contains products)
-6. **Category → Category**: Self-referencing (Parent-child hierarchy)
-7. **Product → Reviews**: One-to-Many (Product can have many reviews)
-8. **Product → Related Products**: Many-to-Many (Products can reference each other)
-9. **Order → Products**: Many-to-Many (via order items)
-10. **Coupon → Products/Categories**: Many-to-Many (Coupon applicability)
+1. **Admin → Campaigns**: One-to-Many (Admin creates multiple campaigns)
+2. **User → Orders**: One-to-Many (A user can have multiple orders)
+3. **User → Wishlist**: One-to-One (Each user has one wishlist)
+4. **User → Carts**: One-to-Many (User + session-based carts)
+5. **User → Reviews**: One-to-Many (User can review multiple products)
+6. **Category → Products**: One-to-Many (Category contains products)
+7. **Category → Category**: Self-referencing (Parent-child hierarchy)
+8. **Product → Reviews**: One-to-Many (Product can have many reviews)
+9. **Product → Related Products**: Many-to-Many (Products can reference each other)
+10. **Order → Products**: Many-to-Many (via order items)
+11. **Coupon → Products/Categories**: Many-to-Many (Coupon applicability)
 
 ---
 
@@ -705,6 +797,7 @@ orders (N) ←→ (1) coupons (via couponCode)
 ### Index Strategy:
 
 #### Primary Indexes (Unique):
+- `admins.email`
 - `users.email`
 - `products.slug`
 - `products.sku`
@@ -723,6 +816,7 @@ orders (N) ←→ (1) coupons (via couponCode)
 - `carts.user`, `carts.sessionId`, `carts.updatedAt`
 - `reviews.product`, `reviews.user`, `reviews.isApproved`
 - `coupons.isActive`
+- `campaigns.status`, `campaigns.createdBy`
 - `newsletters.isSubscribed`
 - `pagecontents.isPublished`
 
@@ -734,6 +828,7 @@ orders (N) ←→ (1) coupons (via couponCode)
 - `reviews`: `{ product: 1, user: 1 }` (unique)
 - `reviews`: `{ product: 1, isApproved: 1, createdAt: -1 }`
 - `coupons`: `{ code: 1, isActive: 1 }`
+- `campaigns`: `{ status: 1, createdAt: -1 }`
 
 #### Text Indexes:
 - `products`: Text index on `name`, `description`, `tags`
@@ -793,13 +888,13 @@ DATABASE_URL=mongodb://username:password@host:port/database
 
 | Metric | Value |
 |--------|-------|
-| **Total Collections** | 11 |
-| **Collections with Timestamps** | 10 |
-| **Collections with Unique Indexes** | 11 |
-| **Collections with Compound Indexes** | 6 |
+| **Total Collections** | 13 |
+| **Collections with Timestamps** | 12 |
+| **Collections with Unique Indexes** | 13 |
+| **Collections with Compound Indexes** | 7 |
 | **Collections with Text Search** | 2 |
-| **Total Reference Relationships** | 15+ |
-| **Collections with Pre-save Hooks** | 7 |
+| **Total Reference Relationships** | 17+ |
+| **Collections with Pre-save Hooks** | 8 |
 | **Collections with Custom Methods** | 6 |
 
 ---
